@@ -69,33 +69,49 @@ class ArtworkAnalysisUI:
         uploaded_file = st.file_uploader("选择图片文件", type=['png', 'jpg', 'jpeg'])
         
         if uploaded_file is not None:
-            # 显预览图
-            image = Image.open(uploaded_file)
-            st.image(image, caption="作品预览", use_container_width=True)
-            
-            # 保存临时文件
-            temp_path = f"temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-            image.save(temp_path)
-            
-            if st.button("提交数据"):
-                try:
-                    # 导入数据
-                    result = self.importer.import_complete_record(
-                        child_data,
-                        artwork_data,
-                        temp_path
-                    )
-                    
-                    if result['success']:
-                        st.success("数据导入成功！")
-                        st.json(result)
-                    else:
-                        st.error(f"导入失败: {result['error']}")
+            try:
+                # 创建临时目录
+                temp_dir = "temp"
+                os.makedirs(temp_dir, exist_ok=True)
+                
+                # 显示预览图
+                image = Image.open(uploaded_file)
+                st.image(image, caption="作品预览", use_container_width=True)
+                
+                # 保存临时文件
+                temp_path = os.path.join(temp_dir, f"temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg")
+                
+                # 确保图片是RGB模式
+                if image.mode != 'RGB':
+                    image = image.convert('RGB')
+                
+                # 保存图片
+                image.save(temp_path, format='JPEG', quality=95)
+                
+                if st.button("提交数据"):
+                    try:
+                        # 导入数据
+                        result = self.importer.import_complete_record(
+                            child_data,
+                            artwork_data,
+                            temp_path
+                        )
                         
-                finally:
-                    # 清理临时文件
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
+                        if result['success']:
+                            st.success("数据导入成功！")
+                            st.json(result)
+                        else:
+                            st.error(f"导入失败: {result['error']}")
+                            
+                    finally:
+                        # 清理临时文件
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
+                    
+            except Exception as e:
+                st.error(f"处理图片时出错: {str(e)}")
+                if 'temp_path' in locals() and os.path.exists(temp_path):
+                    os.remove(temp_path)
     
     def view_artwork_page(self):
         st.header("作品浏览")
@@ -473,7 +489,7 @@ class ArtworkAnalysisUI:
         - 最常见的情绪表达是 "{most_common_emotion}"
         
         2. 色彩使用特点
-        - 主要使用的色彩为 {", ".join(list(color_counts.keys())[:3])}
+        - 主要使用的��彩为 {", ".join(list(color_counts.keys())[:3])}
         - 色彩情绪表达多样，包含 {len(emotion_counts)} 种不同情绪
         
         3. 教育环境影响
